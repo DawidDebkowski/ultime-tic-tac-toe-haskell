@@ -1,4 +1,4 @@
-module State (State(..), showBoard, showSmallBoard, checkMove, makeMove, startingState) where
+module State (State(..), showBoard, showSmallBoard, checkMove, makeMove, startingState, other) where
 import Board
 import Data.List (intercalate)
 import Crypto.Hash.MD5 (start)
