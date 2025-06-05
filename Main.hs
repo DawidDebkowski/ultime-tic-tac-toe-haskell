@@ -2,6 +2,7 @@ module Main where
 import State
 import Board
 import MiniMax ( StateMove(move, eval), findBestMove )
+import MiniMax ( StateMove(move, eval), findBestMove )
 
 -- parsowanie ruchu
 parseMove :: String -> Maybe (Int, Int)
@@ -28,7 +29,7 @@ gameLoop st = do
       if current st == O -- AI plays as O
         then do
           putStrLn "AI is thinking..."
-          let aiMove = findBestMove st 6 False -- 4 is the search depth, adjust as needed
+          let aiMove = findBestMove st 8 False -- 4 is the search depth, adjust as needed
           putStrLn $ "AI plays: " ++ show (fst (move aiMove) + 1) ++ " " ++ show (snd (move aiMove) + 1) ++ " " ++ show (eval aiMove)
           gameLoop (makeMove st (move aiMove))
         else do
@@ -48,11 +49,10 @@ botGameLoop st = do
       putStrLn $ "Current: " ++ show (current st)
       putStrLn $ "Play in sub-board: " ++ maybe "any" (show . (+1)) (nextIndex st)
       putStrLn $ "AI (" ++ show (current st) ++ ") is thinking..." ++ show (current st == X)
-      let aiMove = findBestMove st 6 (current st == X) -- Adjust depth for speed/performance
+      let aiMove = findBestMove st 4 (current st == X) -- Adjust depth for speed/performance
       putStrLn $ "AI (" ++ show (current st) ++ ") plays: " ++ show (fst (move aiMove) + 1) ++ " " ++ show (snd (move aiMove) + 1) ++ " | eval: " ++ show (eval aiMove)
       botGameLoop (makeMove st (move aiMove))
 
 -- main
 main:: IO();
-main = do
-  gameLoop startingState;
+main = botGameLoop startingState;
