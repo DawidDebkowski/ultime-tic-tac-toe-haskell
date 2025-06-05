@@ -82,12 +82,13 @@ twoInLine sb player = any hasTwoAndEmpty wins
 
 evalSmallBoard :: SmallBoard -> Player -> Int
 evalSmallBoard sb player
-  | twoInLine sb player = 10
-  | twoInLine sb (other player) = -10
-  | otherwise = 0
+    | checkSmallBoard sb == Just (Just player) = 3
+    | twoInLine sb player = 1
+    | twoInLine sb (other player) = -1
+    | otherwise = 0
 
 evalSmallBoards :: BigBoard -> Player -> Int
-evalSmallBoards bb player = length [sb | sb <- bb, twoInLine sb player] + countWonSmallBoards bb player * 5
+evalSmallBoards bb player = length [sb | sb <- bb, twoInLine sb player] + countWonSmallBoards bb player * 4
 
 countWonSmallBoards :: BigBoard -> Player -> Int
 countWonSmallBoards bb player = length [sb | sb <- bb, checkSmallBoard sb == Just (Just player)]
@@ -102,26 +103,10 @@ evalState sm =
         _ -> evalNextBoard s + generalScore
         where
             s = state sm
-            generalScore = twoInALineScore (board s) * 50 + -- dwa w lii na dużej -- dwa w lii na dużej -- dwa w lii na dużej -- dwa w lii na dużej
-                 -- dwa w lii na dużej
-                 -- dwa w lii na dużej
-                 -- dwa w lii na dużej -- dwa w lii na dużej
-                 -- dwa w lii na dużej
-                evalSmallBoard (board s !! snd (move sm) ) X * 2 - -- sprawdzamy aktualna plansze, zeby miala wieksza wartosc -- sprawdzamy aktualna plansze, zeby miala wieksza wartosc -- sprawdzamy aktualna plansze, zeby miala wieksza wartosc -- sprawdzamy aktualna plansze, zeby miala wieksza wartosc
-                 -- sprawdzamy aktualna plansze, zeby miala wieksza wartosc
-                 -- sprawdzamy aktualna plansze, zeby miala wieksza wartosc
-                 -- sprawdzamy aktualna plansze, zeby miala wieksza wartosc -- sprawdzamy aktualna plansze, zeby miala wieksza wartosc
-                 -- sprawdzamy aktualna plansze, zeby miala wieksza wartosc
-                evalSmallBoard (board s !! snd (move sm) ) O * 2 + -- tak samo dla O -- tak samo dla O -- tak samo dla O -- tak samo dla O
-                 -- tak samo dla O
-                 -- tak samo dla O
-                 -- tak samo dla O -- tak samo dla O
-                 -- tak samo dla O
-                evalSmallBoards (board s) X * 5 - -- sprawdzamy ile plansz jest prawie wygranych -- sprawdzamy ile plansz jest prawie wygranych -- sprawdzamy ile plansz jest prawie wygranych -- sprawdzamy ile plansz jest prawie wygranych
-                 -- sprawdzamy ile plansz jest prawie wygranych
-                 -- sprawdzamy ile plansz jest prawie wygranych
-                 -- sprawdzamy ile plansz jest prawie wygranych -- sprawdzamy ile plansz jest prawie wygranych
-                 -- sprawdzamy ile plansz jest prawie wygranych
+            generalScore = twoInALineScore (board s) * 50 + -- dwa w lii na dużej 
+                evalSmallBoard (board s !! snd (move sm) ) X * 10 - -- sprawdzamy aktualna plansze, zeby miala wieksza wartosc 
+                evalSmallBoard (board s !! snd (move sm) ) O * 10 + -- tak samo dla O
+                evalSmallBoards (board s) X * 5 - -- sprawdzamy ile plansz jest prawie wygranych
                 evalSmallBoards (board s) O * 5
 
 isTerminal :: StateMove -> Bool

@@ -28,7 +28,7 @@ gameLoop st = do
       if current st == O -- AI plays as O
         then do
           putStrLn "AI is thinking..."
-          let aiMove = findBestMove st 8 False -- 4 is the search depth, adjust as needed
+          let aiMove = findBestMove st 6 False -- 4 is the search depth, adjust as needed
           putStrLn $ "AI plays: " ++ show (fst (move aiMove) + 1) ++ " " ++ show (snd (move aiMove) + 1) ++ " " ++ show (eval aiMove)
           gameLoop (makeMove st (move aiMove))
         else do
@@ -54,4 +54,4 @@ botGameLoop st = do
 
 -- main
 main:: IO();
-main = botGameLoop startingState;
+main = gameLoop startingState;
