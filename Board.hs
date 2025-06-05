@@ -1,4 +1,4 @@
-module Board (Cell(..), SmallBoard, BigBoard, Player(..), checkSmallBoard, updateBoard, checkBigBoard) where
+module Board (Cell(..), SmallBoard, BigBoard, Player(..), checkSmallBoard, updateBoard, checkBigBoard, wonSmallBoards, wins) where
 import Data.Maybe (isJust)
 
 data Player = X | O deriving (Eq, Show)
@@ -34,7 +34,6 @@ checkSmallBoard sb
         threeX idxs = all (== Taken X) (map (sb !!) idxs)
         threeO idxs = all (== Taken O) (map (sb !!) idxs)
 
--- -- updatowanie stanow malych plansz
 -- updateSmallState :: BigBoard -> SmallState
 -- updateSmallState bb = map checkSmallBoard bb
 
@@ -50,6 +49,10 @@ checkBigBoard bb
         ss = map checkSmallBoard bb
         threeX idxs = all (== Just (Just X)) (map (ss !!) idxs)
         threeO idxs = all (== Just (Just O)) (map (ss !!) idxs)
+
+-- zwraca listę indeksów wygranych małych plansz
+wonSmallBoards :: (Num a, Enum a) => [SmallBoard] -> Player -> [a]
+wonSmallBoards bb player = [i | (i, s) <- zip [0..] (map checkSmallBoard bb), s == Just (Just player)]
 
 -- dodawanie nowego pola na plansze
 updateBoard :: BigBoard -> Int -> Int -> Cell -> BigBoard
