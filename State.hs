@@ -1,7 +1,6 @@
 module State (State(..), showBoard, showSmallBoard, checkMove, makeMove, startingState, other) where
 import Board
 import Data.List (intercalate)
-import Crypto.Hash.MD5 (start)
 
 data State = State {
     board :: BigBoard, -- plansza
@@ -45,9 +44,17 @@ makeMove s (smallBoardIndex, cellIndex) = newState
         newState = State newBoard (other (current s)) next
 
 -- tworzy liste 3 rzedow z malej planszy (dla rzedu: Taken X, Nothing, Taken O zwraca "X _ O" i tak dla kazdego rzedu)
+-- showSmallBoard :: SmallBoard -> [String]
+-- showSmallBoard sb = [row r | r <- [0..2]]
+--     where row r = intercalate " " [show (sb !! (r*3 + c)) | c <- [0..2]]
 showSmallBoard :: SmallBoard -> [String]
-showSmallBoard sb = [row r | r <- [0..2]]
-    where row r = intercalate " " [show (sb !! (r*3 + c)) | c <- [0..2]]
+showSmallBoard sb = case checkSmallBoard sb of
+    Nothing -> [ row r | r <- [0..2] ]
+    Just Nothing -> ["■ ■ ■","■ ■ ■","■ ■ ■"]
+    Just (Just O) -> ["/ - \\","|   |","\\ _ /"]
+    Just (Just X) -> ["\\   /","  X  ","/   \\"]
+    where
+        row r = intercalate " " [ show (sb !! (r*3 + c)) | c <- [0..2] ]
 
 -- wypisywanie planszy
 showBoard :: State -> String
