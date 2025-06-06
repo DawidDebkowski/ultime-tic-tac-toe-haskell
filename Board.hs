@@ -28,9 +28,6 @@ checkSmallBoard sb
         threeX idxs = all (== Taken X) (map (sb !!) idxs)
         threeO idxs = all (== Taken O) (map (sb !!) idxs)
 
--- updateSmallState :: BigBoard -> SmallState
--- updateSmallState bb = map checkSmallBoard bb
-
 -- sprawdzenie wygranej na duzej planszy
 checkBigBoard :: BigBoard -> Maybe (Maybe Player)
 checkBigBoard bb
