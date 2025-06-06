@@ -12,12 +12,6 @@ instance Show Cell where
 type SmallBoard = [Cell]
 type BigBoard = [SmallBoard]
 
--- -- stany malych plansz
--- -- Nothing - plansza na ktorej mozna grac
--- -- Just (Nothing) - remis
--- -- Just (Just X/O) - wygrana X/O
--- type SmallState = [Maybe (Maybe Player)]
-
 -- tablica wygrywajacych kombinacji indexow
 wins :: [[Int]]
 wins = [[0,1,2], [3,4,5], [6,7,8], [0,3,6], [1,4,7], [2,5,8], [0,4,8], [2,4,6]]
@@ -34,11 +28,7 @@ checkSmallBoard sb
         threeX idxs = all (== Taken X) (map (sb !!) idxs)
         threeO idxs = all (== Taken O) (map (sb !!) idxs)
 
--- updateSmallState :: BigBoard -> SmallState
--- updateSmallState bb = map checkSmallBoard bb
-
 -- sprawdzenie wygranej na duzej planszy
--- checkBigBoard :: SmallState -> Maybe (Maybe Player)
 checkBigBoard :: BigBoard -> Maybe (Maybe Player)
 checkBigBoard bb
     | any threeX wins = Just (Just X) -- wygrana X
