@@ -47,6 +47,9 @@ makeMove s (smallBoardIndex, cellIndex) = newState
 -- showSmallBoard :: SmallBoard -> [String]
 -- showSmallBoard sb = [row r | r <- [0..2]]
 --     where row r = intercalate " " [show (sb !! (r*3 + c)) | c <- [0..2]]
+-- showSmallBoard :: SmallBoard -> [String]
+-- showSmallBoard sb = [row r | r <- [0..2]]
+--     where row r = intercalate " " [show (sb !! (r*3 + c)) | c <- [0..2]]
 showSmallBoard :: SmallBoard -> [String]
 showSmallBoard sb = case checkSmallBoard sb of
     Nothing -> [ row r | r <- [0..2] ]
