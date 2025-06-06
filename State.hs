@@ -56,13 +56,15 @@ showSmallBoard sb = case checkSmallBoard sb of
     where
         row r = intercalate " " [ show (sb !! (r*3 + c)) | c <- [0..2] ]
 
--- wypisywanie planszy
 showBoard :: State -> String
--- polaczenie 3 list 3/4 rzedow w 1 liste i polaczenie z separatorem "\n"
-showBoard s = intercalate "\n" (concat ([row r | r <- [0..2]]))
-    where
-        b = board s
-        -- lista 3/4 rzedow
-        -- R - index rzedu smallBoard [0..2], r - index rzedu tekstu [0..2], C - index komuny SmallBoard [0..2]
-        -- R*3 + C - index SmallBoard, !! r - wyciaga r-ty rzad z showSmallBoard 
-        row br = [intercalate " | " [showSmallBoard (b !! (br*3 + bc)) !! r | bc <- [0..2]] | r <- [0..2]] ++ [if br<2 then replicate 22 '-' else ""]
+showBoard s = intercalate "\n" (border : concat [blockRows br | br <- [0..2]])
+  where
+    b = board s
+
+    cellRow :: Int -> Int -> String
+    cellRow br r = "| " ++ intercalate " | " [showSmallBoard (b !! (br*3 + bc)) !! r | bc <- [0..2]] ++ " |"
+
+    blockRows :: Int -> [String]
+    blockRows br = [cellRow br r | r <- [0..2]] ++ [border]
+
+    border = replicate 25 '-'
