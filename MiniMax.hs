@@ -110,14 +110,10 @@ evalState sm =
         _ -> evalNextBoard s + generalScore
         where
             s = state sm
-            generalScore = twoInALineBigBoard (board s) * 50 + -- dwa w lii na dużej  -- dwa w lii na dużej 
-                 -- dwa w lii na dużej 
-                evalSmallBoard (board s !! snd (move sm) ) X * 10 - -- sprawdzamy aktualna plansze, zeby miala wieksza wartosc  -- sprawdzamy aktualna plansze, zeby miala wieksza wartosc 
-                 -- sprawdzamy aktualna plansze, zeby miala wieksza wartosc 
-                evalSmallBoard (board s !! snd (move sm) ) O * 10 + -- tak samo dla O -- tak samo dla O
-                 -- tak samo dla O
-                evalSmallBoards (board s) X * 5 - -- sprawdzamy ile plansz jest prawie wygranych -- sprawdzamy ile plansz jest prawie wygranych
-                 -- sprawdzamy ile plansz jest prawie wygranych
+            generalScore = twoInALineBigBoard (board s) * 50 + -- dwa w lii na dużej
+                evalSmallBoard (board s !! snd (move sm) ) X * 10 - -- sprawdzamy aktualna plansze, zeby miala wieksza wartosc 
+                evalSmallBoard (board s !! snd (move sm) ) O * 10 + -- tak samo dla O
+                evalSmallBoards (board s) X * 5 - -- sprawdzamy ile plansz jest prawie wygranych
                 evalSmallBoards (board s) O * 5
 
 isTerminal :: StateMove -> Bool
