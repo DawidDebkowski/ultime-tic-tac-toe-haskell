@@ -16,6 +16,9 @@ data StateMove = StateMove {
     moveDepth :: Int
 }
 
+instance Show StateMove where
+    show s = show (move s)
+
 instance Eq StateMove where
     a == b = (move a == move b) && (eval a == eval b)
 
@@ -182,8 +185,8 @@ minimaxAlphaBeta currentState maximizing searchDepth alpha beta
                         msgPrefix = if maximizing then "UnifiedMax: " else "UnifiedMin: "
                         msg = msgPrefix ++ "Depth=" ++ show searchDepth ++
                               ", Alpha=" ++ show currentAlpha ++ ", Beta=" ++ show currentBeta ++
-                              ", BestEval=" ++ show (eval bestSoFar) ++ ", Move=" ++ show (move bestSoFar)
-                        tracedAction action = if searchDepth == 4 then trace msg action else action
+                              ", BestEval=" ++ show (eval bestSoFar) ++ ", BestMove=" ++ show (move bestSoFar) ++ "left= " ++ show (remainingMoves)
+                        tracedAction action = if searchDepth == 5 then trace msg action else action
 
                         childResult = minimaxAlphaBeta currentPotentialMove (not maximizing) (searchDepth - 1) currentAlpha currentBeta
 
@@ -199,7 +202,7 @@ minimaxAlphaBeta currentState maximizing searchDepth alpha beta
                                                 then (max currentAlpha (eval newBestSoFar), currentBeta)
                                                 else (currentAlpha, min currentBeta (eval newBestSoFar))
                     in 
-                       tracedAction $ 
+                    --    tracedAction $ 
                        unifiedLoop nextAlpha nextBeta remainingMoves newBestSoFar
 
             initialBestEval = if maximizing then -inf -1 else inf + 1

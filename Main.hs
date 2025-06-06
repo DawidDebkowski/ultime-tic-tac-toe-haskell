@@ -69,7 +69,7 @@ botGameLoop st turn = do
     Nothing       -> do
       putStrLn $ "Current: " ++ show (current st)
       putStrLn $ "Play in small board: " ++ maybe "any" (show . (+1)) (nextIndex st)
-      putStr $ "AI (" ++ show (current st) ++ ") is thinking... "
+      putStr $ "AI (" ++ show (current st) ++ ") is thinking... " ++ show (current st == X)
       let aiMove = findBestMove st 5 (current st == X) -- Adjust depth for speed/performance
       -- putStrLn (if eval aiMove < 100 then " is thinking..." else " is deeply troubled...")
       putStrLn $ case current st of
