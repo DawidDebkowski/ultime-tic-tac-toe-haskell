@@ -1,7 +1,6 @@
 module MiniMax where
 import State
 import Board
-import Control.Monad (when)
 import Debug.Trace
 
 inf :: Int
@@ -20,6 +19,8 @@ instance Eq StateMove where
 instance Ord StateMove where
     compare a b = compare (eval a) (eval b)
 
+----- znajdywanie ruchów --------------
+
 checkAndMakeMove :: State -> (Int, Int) -> Maybe State
 checkAndMakeMove s (x, y) = if checkMove s (x,y) then Just (makeMove s (x, y)) else Nothing
 
@@ -36,11 +37,16 @@ getPossibleMoves s = case nextIndex s of
             nextBoardIndex <- [0..8],
             Just state' <- [checkAndMakeMove s (nextBoardIndex, moveIndex)] ]
 
+-----------------------------
+
 countPawns :: Maybe [Cell] -> Player -> Int
 countPawns Nothing _ = 0
 countPawns (Just sb) player =
     length [c | c <- sb, c == Taken player]
 
+-- specjalna ewaluacja dla "następnej" planszy
+-- jeżeli przeciwnik będzie mógł się ruszyć na "any", to źle dla osoby wykonującej ruch
+-- w przeciwnym przypadku robi eval + liczy pionki
 evalNextBoard :: State -> Int
 evalNextBoard s = case nextIndex s of
                 Nothing -> 7 * if current s == X then -1 else 1
@@ -51,8 +57,8 @@ evalNextBoard s = case nextIndex s of
                     evalSmallBoard sb X -
                     evalSmallBoard sb O
 
-twoInALineScore :: BigBoard -> Int
-twoInALineScore bb =
+twoInALineBigBoard :: BigBoard -> Int
+twoInALineBigBoard bb =
     let x_wonBoards = wonSmallBoards bb X
         o_wonBoards = wonSmallBoards bb O
 
@@ -88,7 +94,7 @@ evalSmallBoard sb player
     | otherwise = 0
 
 evalSmallBoards :: BigBoard -> Player -> Int
-evalSmallBoards bb player = length [sb | sb <- bb, twoInLine sb player] + countWonSmallBoards bb player * 4
+evalSmallBoards bb player = length [sb | sb <- bb, checkSmallBoard sb == Nothing, twoInLine sb player] + countWonSmallBoards bb player * 4
 
 countWonSmallBoards :: BigBoard -> Player -> Int
 countWonSmallBoards bb player = length [sb | sb <- bb, checkSmallBoard sb == Just (Just player)]
@@ -103,7 +109,7 @@ evalState sm =
         _ -> evalNextBoard s + generalScore
         where
             s = state sm
-            generalScore = twoInALineScore (board s) * 50 + -- dwa w lii na dużej 
+            generalScore = twoInALineBigBoard (board s) * 50 + -- dwa w lii na dużej 
                 evalSmallBoard (board s !! snd (move sm) ) X * 10 - -- sprawdzamy aktualna plansze, zeby miala wieksza wartosc 
                 evalSmallBoard (board s !! snd (move sm) ) O * 10 + -- tak samo dla O
                 evalSmallBoards (board s) X * 5 - -- sprawdzamy ile plansz jest prawie wygranych
