@@ -32,4 +32,5 @@ gameLoop st = do
 
 -- main
 main:: IO();
-main = gameLoop startingState;
+main = do
+  gameLoop startingState;
