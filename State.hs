@@ -44,6 +44,9 @@ makeMove s (smallBoardIndex, cellIndex) = newState
         newState = State newBoard (other (current s)) next
 
 -- tworzy liste 3 rzedow z malej planszy (dla rzedu: Taken X, Nothing, Taken O zwraca "X _ O" i tak dla kazdego rzedu)
+-- showSmallBoard :: SmallBoard -> [String]
+-- showSmallBoard sb = [row r | r <- [0..2]]
+--     where row r = intercalate " " [show (sb !! (r*3 + c)) | c <- [0..2]]
 showSmallBoard :: SmallBoard -> [String]
 showSmallBoard sb = case checkSmallBoard sb of
     Nothing -> [ row r | r <- [0..2] ]
