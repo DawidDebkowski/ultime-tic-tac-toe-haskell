@@ -86,9 +86,9 @@ main = do
       putStrLn "Who do you want to play?: "
       line <- getLine
       case toLower line of
-        "x" -> oneBotGameLoop startingState X
-        "o" -> oneBotGameLoop startingState O
-        "y" -> oneBotGameLoop startingState O
+        "x" -> oneBotGameLoop startingState O
+        "o" -> oneBotGameLoop startingState X
+        "y" -> oneBotGameLoop startingState X
         _   -> putStrLn "Invalid input, please enter X or O" >> main
     "0" -> botGameLoop startingState
     _   -> putStrLn "Invalid input, please enter 0, 1, or 2." >> main
