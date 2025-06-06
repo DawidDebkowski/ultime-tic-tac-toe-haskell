@@ -31,3 +31,11 @@ gameLoop st = do
 
 
 
+
+
+3 zagadnienia problemowe
+
+1 zagadnienie programy spoleczne
+zalety wady itp mamy notate z tego juz i tyle
+7 sztuk (to tez wiemy)
+

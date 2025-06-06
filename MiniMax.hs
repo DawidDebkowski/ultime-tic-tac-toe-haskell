@@ -3,6 +3,8 @@ import State
 import Board
 import Debug.Trace
 import Data.Maybe (isNothing)
+import Data.List (sort, sortBy)
+import Data.Ord (comparing, Down(Down))
 
 inf :: Int
 inf = 1000000
@@ -29,16 +31,18 @@ checkAndMakeMove s (x, y) = if checkMove s (x,y) then Just (makeMove s (x, y)) e
 getPossibleMoves:: State -> [StateMove]
 getPossibleMoves s = case nextIndex s of
     Just nextBoardIndex ->
-        [StateMove { state = state', move = (nextBoardIndex, moveIndex), eval = 0, moveDepth = 0 } |
+        [StateMove { state = state', move = (nextBoardIndex, moveIndex), eval = evalState state' (nextBoardIndex, moveIndex) 0, moveDepth = 0 } |
             moveIndex <- [0..8],
             Just state' <- [checkAndMakeMove s (nextBoardIndex, moveIndex)] ]
     Nothing ->
-        [StateMove { state = state', move = (nextBoardIndex, moveIndex), eval = 0, moveDepth = 0 } |
+        [StateMove { state = state', move = (nextBoardIndex, moveIndex), eval = evalState state' (nextBoardIndex, moveIndex) 0, moveDepth = 0 } |
             moveIndex <- [0..8],
             nextBoardIndex <- [0..8],
             Just state' <- [checkAndMakeMove s (nextBoardIndex, moveIndex)] ]
 
 -----------------------------
+
+----- ewaluacje --------------
 
 countPawns :: Maybe [Cell] -> Player -> Int
 countPawns Nothing _ = 0
@@ -77,7 +81,7 @@ twoInALineBigBoard bb =
                    && any (\i -> i `notElem` x_wonBoards && i `notElem` o_wonBoards) line
             ) wins
         twoInLineScore = length xTwoInLine - length oTwoInLine
-    in twoInLineScore -- 10 points per two-in-a-line, adjust as needed
+    in twoInLineScore 
 
 -- sprawdza czy na jakiejkolwiek linii sa dwa takie same symbole i jedno puste pole
 twoInLine :: SmallBoard -> Player -> Bool
@@ -100,9 +104,12 @@ evalSmallBoards bb player = length [sb | sb <- bb, isNothing (checkSmallBoard sb
 countWonSmallBoards :: BigBoard -> Player -> Int
 countWonSmallBoards bb player = length [sb | sb <- bb, checkSmallBoard sb == Just (Just player)]
 
+evalState :: State -> (Int, Int) -> p -> Int
+evalState s mv d = evalStateMove StateMove{state = s, move = mv, eval = 0, moveDepth=0}
+
 -- funkcja do oceny heurystycznej stanu planszy
-evalState :: StateMove -> Int
-evalState sm =
+evalStateMove :: StateMove -> Int
+evalStateMove sm =
     case checkBigBoard (board s) of
         Just (Just p) | p == X           -> inf
         Just (Just p) | p == O           -> -inf
@@ -116,106 +123,91 @@ evalState sm =
                 evalSmallBoards (board s) X * 5 - -- sprawdzamy ile plansz jest prawie wygranych
                 evalSmallBoards (board s) O * 5
 
+--------------------------------------
+
+-------------- minimax ---------------
+
 isTerminal :: StateMove -> Bool
 isTerminal sm = case checkBigBoard (board (state sm)) of
     Just _  -> True
     Nothing -> False
 
+isChildPreferredMax :: StateMove -> StateMove -> Bool
+isChildPreferredMax childResult bestMoveSoFar =
+    (eval childResult > eval bestMoveSoFar) || -- Strictly better
+    (eval childResult == eval bestMoveSoFar && -- Tie in eval, check moveDepth
+        ( (eval childResult == inf && moveDepth childResult > moveDepth bestMoveSoFar) || -- Win faster
+          (eval childResult == -inf && moveDepth childResult < moveDepth bestMoveSoFar)    -- Lose slower
+        )
+    )
+
+isChildPreferredMin :: StateMove -> StateMove -> Bool
+isChildPreferredMin childResult bestMoveSoFar =
+    (eval childResult < eval bestMoveSoFar) || -- Strictly better for minimizer
+    (eval childResult == eval bestMoveSoFar && -- Tie in eval
+        ( (eval childResult == inf && moveDepth childResult < moveDepth bestMoveSoFar) || -- X wins slower (good for O)
+          (eval childResult == -inf && moveDepth childResult > moveDepth bestMoveSoFar)    -- O wins faster
+        )
+    )
+
+createStateFromChild :: StateMove -> StateMove -> StateMove
+createStateFromChild mv chld = StateMove { state = state mv,
+                                           move = move mv,
+                                           eval = eval chld,
+                                           moveDepth = moveDepth chld }
+
 minimaxAlphaBeta :: StateMove -> Bool -> Int -> Int -> Int -> StateMove
-minimaxAlphaBeta currentState maximizing depth alpha beta
-    | depth == 0 || isTerminal currentState =
-        StateMove { state = state currentState, move = move currentState, eval = evalState currentState, moveDepth = depth } -- move is placeholder at leaf
-
-    | maximizing =
+minimaxAlphaBeta currentState maximizing searchDepth alpha beta
+    | searchDepth == 0 || isTerminal currentState =
+        StateMove { state = state currentState, move = move currentState, eval = evalStateMove currentState, moveDepth = searchDepth }
+    | otherwise =
         let
-            possibleStateMoves = getPossibleMoves (state currentState)
+            -- dla polepszenia alfa-beta -> rozważamy ruchy od potencjalnie dla nas najlepszego
+            possibleStateMoves =
+                let moves = getPossibleMoves (state currentState)
+                in if maximizing
+                    then sortBy (comparing (Down . eval)) moves 
+                    else sort moves   
 
-            -- Inner loop function to iterate through moves
-            loopMoves :: [StateMove] -> StateMove -> Int -> StateMove
-            loopMoves [] bestMoveSoFar _currentAlpha = bestMoveSoFar
-            loopMoves (currentPotentialMove:remainingMoves) bestMoveSoFar currentAlphaInternal =
-                -- If currentAlphaInternal (best for maximizer) is already >= beta (worst for minimizer), prune
-                let
-                    msg = "Maximizing: Depth=" ++ show depth ++ ", Alpha=" ++ show currentAlphaInternal ++ ", Beta=" ++ show beta ++ ", Current Best Eval=" ++ show (eval bestMoveSoFar) ++ ", move(add +1 to each)=" ++ show (move bestMoveSoFar)
-                    tracedAction action = if depth == 6 then trace msg action else action
-                in
-                -- tracedAction $
-                if currentAlphaInternal >= beta then
-                    bestMoveSoFar
-                else
+            unifiedLoop :: Int                      -- alfa
+                        -> Int                      -- beta
+                        -> [StateMove]              -- tablica ruchów do przerobienia
+                        -> StateMove                -- najlepszy dotychczasowy
+                        -> StateMove
+            unifiedLoop _ _ [] bestSoFar = bestSoFar
+            unifiedLoop currentAlpha currentBeta (currentPotentialMove:remainingMoves) bestSoFar
+                | currentAlpha > currentBeta = bestSoFar
+                | otherwise =
                     let
-                        -- Evaluate this move by calling minimax on the resulting state
-                        -- currentPotentialMove.state is the state *after* the move
-                        childResult = minimaxAlphaBeta currentPotentialMove False (depth - 1) currentAlphaInternal beta
-                        -- If this path is better, update bestMoveSoFar
-                        -- The 'move' is currentPotentialMove.move, 'eval' is from childResult
-                        newBestMove
-                          | eval childResult > eval bestMoveSoFar = StateMove { state = state currentPotentialMove, -- state after this move
-                                                       move = move currentPotentialMove,   -- the move taken
-                                                       eval = eval childResult,
-                                                       moveDepth = moveDepth childResult }
-                          | eval childResult == eval bestMoveSoFar = case eval childResult of -- patrzymy czy mozemy wygrac szybciej / przegrac wolniej
-                                              x | x == inf -> if moveDepth childResult > moveDepth bestMoveSoFar then StateMove { state = state currentPotentialMove, -- state after this move
-                                                       move = move currentPotentialMove,   -- the move taken
-                                                       eval = eval childResult,
-                                                       moveDepth = moveDepth childResult } else bestMoveSoFar
-                                                | x == -inf -> if moveDepth childResult < moveDepth bestMoveSoFar then StateMove { state = state currentPotentialMove, -- state after this move
-                                                       move = move currentPotentialMove,   -- the move taken
-                                                       eval = eval childResult,
-                                                       moveDepth = moveDepth childResult } else bestMoveSoFar
-                                                | otherwise -> bestMoveSoFar
-                          | otherwise = bestMoveSoFar
-                        newAlpha = max currentAlphaInternal (eval newBestMove)
-                    in loopMoves remainingMoves newBestMove newAlpha
-        -- Initial best move for maximizing player (worst possible score)
-        -- The 'move' in initialBest is a placeholder.
-        in if null possibleStateMoves
-           then StateMove { state = state currentState, move = (-1,-1), eval = evalState currentState, moveDepth = depth } -- No moves, evaluate current
-           else loopMoves possibleStateMoves (StateMove {state = state currentState, move = (-1,-1), eval = -inf -1, moveDepth = depth}) alpha
+                        msgPrefix = if maximizing then "UnifiedMax: " else "UnifiedMin: "
+                        msg = msgPrefix ++ "Depth=" ++ show searchDepth ++
+                              ", Alpha=" ++ show currentAlpha ++ ", Beta=" ++ show currentBeta ++
+                              ", BestEval=" ++ show (eval bestSoFar) ++ ", Move=" ++ show (move bestSoFar)
+                        tracedAction action = if searchDepth == 4 then trace msg action else action
 
-    | otherwise = -- Minimizing player
-        let
-            possibleStateMoves = getPossibleMoves (state currentState)
+                        childResult = minimaxAlphaBeta currentPotentialMove (not maximizing) (searchDepth - 1) currentAlpha currentBeta
 
-            loopMoves :: [StateMove] -> StateMove -> Int -> StateMove
-            loopMoves [] bestMoveSoFar _currentBeta = bestMoveSoFar
-            loopMoves (currentPotentialMove:remainingMoves) bestMoveSoFar currentBetaInternal =
-                let
-                    msg = "Minimizing: Depth=" ++ show depth ++ ", Alpha=" ++ show alpha ++ ", Beta=" ++ show currentBetaInternal ++ ", Current Best Eval=" ++ show (eval bestMoveSoFar ) ++ ", move(add +1 to each)=" ++ show (move bestMoveSoFar)
-                    tracedAction action = if depth == 6 then trace msg action else action
-                in
-                -- tracedAction $
-                if alpha >= currentBetaInternal then
-                    bestMoveSoFar
-                else
-                    let
-                        -- Evaluate this move by calling minimax on the resulting state
-                        -- currentPotentialMove.state is the state *after* the move
-                        childResult = minimaxAlphaBeta currentPotentialMove True (depth - 1) alpha currentBetaInternal
-                        -- If this path is better, update bestMoveSoFar
-                        -- The 'move' is currentPotentialMove.move, 'eval' is from childResult
-                        newBestMove
-                          | eval childResult < eval bestMoveSoFar = StateMove { state = state currentPotentialMove, -- state after this move
-                                                       move = move currentPotentialMove,   -- the move taken
-                                                       eval = eval childResult,
-                                                       moveDepth = moveDepth childResult }
-                          | eval childResult == eval bestMoveSoFar = case eval childResult of -- patrzymy czy mozemy wygrac szybciej / przegrac wolniej
-                                              x | x == inf -> if moveDepth childResult < moveDepth bestMoveSoFar then StateMove { state = state currentPotentialMove, -- state after this move
-                                                       move = move currentPotentialMove,   -- the move taken
-                                                       eval = eval childResult,
-                                                       moveDepth = moveDepth childResult } else bestMoveSoFar
-                                                | x == -inf -> if moveDepth childResult > moveDepth bestMoveSoFar then StateMove { state = state currentPotentialMove, -- state after this move
-                                                       move = move currentPotentialMove,   -- the move taken
-                                                       eval = eval childResult,
-                                                       moveDepth = moveDepth childResult } else bestMoveSoFar
-                                                | otherwise -> bestMoveSoFar
-                          | otherwise = bestMoveSoFar
-                        newBeta = min currentBetaInternal (eval newBestMove)
-                    in loopMoves remainingMoves newBestMove newBeta
+                        isPreferred = if maximizing
+                                      then isChildPreferredMax childResult bestSoFar
+                                      else isChildPreferredMin childResult bestSoFar
+
+                        newBestSoFar = if isPreferred
+                                       then createStateFromChild currentPotentialMove childResult
+                                       else bestSoFar
+
+                        (nextAlpha, nextBeta) = if maximizing
+                                                then (max currentAlpha (eval newBestSoFar), currentBeta)
+                                                else (currentAlpha, min currentBeta (eval newBestSoFar))
+                    in 
+                       tracedAction $ 
+                       unifiedLoop nextAlpha nextBeta remainingMoves newBestSoFar
+
+            initialBestEval = if maximizing then -inf -1 else inf + 1
+            initialBestSoFar = StateMove {state = state currentState, move = (-1,-1), eval = initialBestEval, moveDepth = searchDepth}
 
         in if null possibleStateMoves
-           then StateMove { state = state currentState, move = (-1,-1), eval = evalState currentState, moveDepth = depth } -- No moves, evaluate current
-           else loopMoves possibleStateMoves (StateMove {state = state currentState, move = (-1,-1), eval = inf + 1, moveDepth = depth }) beta
+           then StateMove { state = state currentState, move = (-1,-1), eval = evalStateMove currentState, moveDepth = searchDepth }
+           else unifiedLoop alpha beta possibleStateMoves initialBestSoFar
 
 -- Top-level function to call minimax
 -- Call this function from your game loop when it's the AI's turn

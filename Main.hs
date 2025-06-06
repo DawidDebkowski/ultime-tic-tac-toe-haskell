@@ -27,8 +27,8 @@ gameLoop st = do
     Just Nothing  -> putStrLn "Game is a draw!"
     Nothing       -> do
       putStrLn $ "Current: " ++ show (current st)
-      putStrLn $ "Play in sub-board: " ++ maybe "any" (show . (+1)) (nextIndex st)
-      putStrLn "Enter move as: sub-board(1-9) cell(1-9), e.g. '5 3':"
+      putStrLn $ "Play in small board: " ++ maybe "any" (show . (+1)) (nextIndex st)
+      putStrLn "Enter move as: small board(1-9) cell(1-9), e.g. '5 3':"
       line <- getLine
       case parseMove line of
         Just mv | checkMove st mv -> gameLoop (makeMove st mv)
@@ -43,35 +43,40 @@ oneBotGameLoop st botPlayer = do
     Just Nothing  -> putStrLn "Game is a draw!"
     Nothing       -> do
       putStrLn $ "Current: " ++ show (current st)
-      putStrLn $ "Play in sub-board: " ++ maybe "any" (show . (+1)) (nextIndex st)
+      putStrLn $ "Play in small board: " ++ maybe "any" (show . (+1)) (nextIndex st)
       if current st == botPlayer -- AI plays as O
         then do
           putStr "AI is thinking..."
           let aiMove = findBestMove st 4 (current st == X) -- 4 is the search depth, adjust as needed
-          putStrLn $ if eval aiMove < 100 then " and thinking..." else " and is deeply troubled..."
+          putStrLn $ case botPlayer of
+            X -> if eval aiMove > 100 then " and thinking..." else " and is deeply troubled..."
+            O -> if eval aiMove < 100 then " and thinking..." else " and is deeply troubled..."
           putStrLn $ "AI plays: " ++ show (fst (move aiMove) + 1) ++ " " ++ show (snd (move aiMove) + 1) ++ " " ++ show (eval aiMove)
           oneBotGameLoop (makeMove st (move aiMove)) botPlayer 
         else do
-          putStrLn "Enter move as: sub-board(1-9) cell(1-9), e.g. '5 3':"
+          putStrLn "Enter move as: small board(1-9) cell(1-9), e.g. '5 3':"
           line <- getLine
           case parseMove line of
             Just mv | checkMove st mv -> oneBotGameLoop (makeMove st mv) botPlayer
             _ -> putStrLn "Invalid move, try again." >> oneBotGameLoop st botPlayer
 
-botGameLoop :: State -> IO ()
-botGameLoop st = do
+botGameLoop :: State -> Int -> IO ()
+botGameLoop st turn = do
   putStrLn $ showBoard st
   case checkBigBoard (board st) of
     Just (Just p) -> putStrLn $ "Player " ++ show p ++ " wins!"
     Just Nothing  -> putStrLn "Game is a draw!"
     Nothing       -> do
       putStrLn $ "Current: " ++ show (current st)
-      putStrLn $ "Play in sub-board: " ++ maybe "any" (show . (+1)) (nextIndex st)
-      putStr $ "AI (" ++ show (current st) ++ ")"
-      let aiMove = findBestMove st 4 (current st == X) -- Adjust depth for speed/performance
-      putStrLn (if eval aiMove < 100 then " is thinking..." else " is deeply troubled...")
+      putStrLn $ "Play in small board: " ++ maybe "any" (show . (+1)) (nextIndex st)
+      putStr $ "AI (" ++ show (current st) ++ ") is thinking... "
+      let aiMove = findBestMove st 5 (current st == X) -- Adjust depth for speed/performance
+      -- putStrLn (if eval aiMove < 100 then " is thinking..." else " is deeply troubled...")
+      putStrLn $ case current st of
+            X -> if eval aiMove > -100 then " and thinking..." else " and is deeply troubled..."
+            O -> if eval aiMove < 100 then " and thinking..." else " and is deeply troubled..."
       putStrLn $ "AI (" ++ show (current st) ++ ") plays: " ++ show (fst (move aiMove) + 1) ++ " " ++ show (snd (move aiMove) + 1) ++ " | eval: " ++ show (eval aiMove)
-      botGameLoop (makeMove st (move aiMove))
+      botGameLoop (makeMove st (move aiMove)) (turn+1)
 
 toLowerChar :: Char -> Char
 toLowerChar c
@@ -99,5 +104,5 @@ main = do
         "o" -> oneBotGameLoop startingState X
         "y" -> oneBotGameLoop startingState X
         _   -> putStrLn "Invalid input, please enter X or O" >> main
-    "0" -> botGameLoop startingState
+    "0" -> botGameLoop startingState 0
     _   -> putStrLn "Invalid input, please enter 0, 1, or 2." >> main
