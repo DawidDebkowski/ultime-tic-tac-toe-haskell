@@ -44,9 +44,6 @@ makeMove s (smallBoardIndex, cellIndex) = newState
         newState = State newBoard (other (current s)) next
 
 -- tworzy liste 3 rzedow z malej planszy (dla rzedu: Taken X, Nothing, Taken O zwraca "X _ O" i tak dla kazdego rzedu)
--- showSmallBoard :: SmallBoard -> [String]
--- showSmallBoard sb = [row r | r <- [0..2]]
---     where row r = intercalate " " [show (sb !! (r*3 + c)) | c <- [0..2]]
 showSmallBoard :: SmallBoard -> [String]
 showSmallBoard sb = case checkSmallBoard sb of
     Nothing -> [ row r | r <- [0..2] ]
@@ -57,14 +54,27 @@ showSmallBoard sb = case checkSmallBoard sb of
         row r = intercalate " " [ show (sb !! (r*3 + c)) | c <- [0..2] ]
 
 showBoard :: State -> String
-showBoard s = intercalate "\n" (border : concat [blockRows br | br <- [0..2]])
+showBoard s = intercalate "\n" (
+        ("-" ++ (if Just 0 == nextIndex s then replicate 7 '=' else replicate 7 '-') ++ "-" ++ (if Just 1 == nextIndex s then replicate 7 '=' else replicate 7 '-') ++ "-" ++ (if Just 2 == nextIndex s then replicate 7 '=' else replicate 7 '-') ++ "-") : 
+        concat [blockRows br | br <- [0..2]]
+    )
   where
     b = board s
 
     cellRow :: Int -> Int -> String
-    cellRow br r = "| " ++ intercalate " | " [showSmallBoard (b !! (br*3 + bc)) !! r | bc <- [0..2]] ++ " |"
+    cellRow br r = 
+        (if Just (br*3) == nextIndex s then "||" else "| ") ++
+        showSmallBoard (b !! (br*3)) !! r ++
+        (if Just (br*3) == nextIndex s then "|| " else if Just (br*3+1) == nextIndex s then " ||" else " | ") ++
+        showSmallBoard (b !! (br*3+1)) !! r ++
+        (if Just (br*3+1) == nextIndex s then "|| " else if Just (br*3+2) == nextIndex s then " ||" else " | ") ++
+        showSmallBoard (b !! (br*3+2)) !! r ++
+        (if Just (br*3+2) == nextIndex s then "||" else " |")
+    -- cellRow br r = "| " ++ intercalate " | " [showSmallBoard (b !! (br*3 + bc)) !! r | bc <- [0..2]] ++ " |"
 
     blockRows :: Int -> [String]
-    blockRows br = [cellRow br r | r <- [0..2]] ++ [border]
+    blockRows br = 
+        [cellRow br r | r <- [0..2]] ++ 
+        ["-" ++ (if Just ((br+1)*3) == nextIndex s || Just (br*3) == nextIndex s then replicate 7 '=' else replicate 7 '-') ++ "-" ++ (if Just ((br+1)*3+1) == nextIndex s || Just (br*3+1) == nextIndex s then replicate 7 '=' else replicate 7 '-') ++ "-" ++ (if Just ((br+1)*3+2) == nextIndex s || Just (br*3+2) == nextIndex s then replicate 7 '=' else replicate 7 '-') ++ "-"]
 
     border = replicate 25 '-'
