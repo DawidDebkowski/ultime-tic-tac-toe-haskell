@@ -2,8 +2,6 @@ module Main where
 import State
 import Board
 import MiniMax ( StateMove(move, eval), findBestMove )
-import MiniMax ( StateMove(move, eval), findBestMove )
-import Data.Sequences (toLower)
 
 validateSingleInt :: String -> [Char] -> Bool
 validateSingleInt c range = length c == 1 && head c `elem` range
@@ -74,6 +72,17 @@ botGameLoop st = do
       putStrLn (if eval aiMove < 100 then " is thinking..." else " is deeply troubled...")
       putStrLn $ "AI (" ++ show (current st) ++ ") plays: " ++ show (fst (move aiMove) + 1) ++ " " ++ show (snd (move aiMove) + 1) ++ " | eval: " ++ show (eval aiMove)
       botGameLoop (makeMove st (move aiMove))
+
+toLowerChar :: Char -> Char
+toLowerChar c
+    | 'A' <= c && c <= 'Z' = toEnum (fromEnum c + offset)
+    | otherwise            = c
+  where
+    offset :: Int
+    offset = fromEnum 'a' - fromEnum 'A'
+
+toLower :: String -> String
+toLower = map toLowerChar
 
 -- main
 main:: IO();
