@@ -2,6 +2,7 @@ module Main where
 import State
 import Board
 import MiniMax ( StateMove(move, eval), findBestMove )
+import System.IO (hFlush, stdout)
 
 validateSingleInt :: String -> [Char] -> Bool
 validateSingleInt c range = length c == 1 && head c `elem` range
@@ -18,7 +19,7 @@ parseMove s = case words s of
   where
     valid t = length t == 1 && head t `elem` ['1'..'9']
 
--- główna pętla (main loop)
+-- główna pętla PvP
 gameLoop :: State -> IO ()
 gameLoop st = do
   putStrLn $ showBoard st
@@ -34,7 +35,7 @@ gameLoop st = do
         Just mv | checkMove st mv -> gameLoop (makeMove st mv)
         _ -> putStrLn "Invalid move, try again." >> gameLoop st
 
--- główna pętla (main loop)
+-- główna pętla PvE
 oneBotGameLoop :: State -> Player -> IO ()
 oneBotGameLoop st botPlayer = do
   putStrLn $ showBoard st
@@ -44,13 +45,14 @@ oneBotGameLoop st botPlayer = do
     Nothing       -> do
       putStrLn $ "Current: " ++ show (current st)
       putStrLn $ "Play in small board: " ++ maybe "any" (show . (+1)) (nextIndex st)
-      if current st == botPlayer -- AI plays as O
+      if current st == botPlayer
         then do
           putStr "AI is thinking..."
-          let aiMove = findBestMove st 4 (current st == X) -- 4 is the search depth, adjust as needed
+          hFlush stdout
+          let aiMove = findBestMove st 4 (current st == X)
           putStrLn $ case botPlayer of
-            X -> if eval aiMove > 100 then " and thinking..." else " and is deeply troubled..."
-            O -> if eval aiMove < 100 then " and thinking..." else " and is deeply troubled..."
+                X -> if eval aiMove > 100 then " and feels confident." else if eval aiMove < -100 then " and is deeply troubled..." else " "
+                O -> if eval aiMove < -100 then " and feels confident." else if eval aiMove > 100 then " and is deeply troubled..." else " "
           putStrLn $ "AI plays: " ++ show (fst (move aiMove) + 1) ++ " " ++ show (snd (move aiMove) + 1) ++ " " ++ show (eval aiMove)
           oneBotGameLoop (makeMove st (move aiMove)) botPlayer 
         else do
@@ -60,6 +62,7 @@ oneBotGameLoop st botPlayer = do
             Just mv | checkMove st mv -> oneBotGameLoop (makeMove st mv) botPlayer
             _ -> putStrLn "Invalid move, try again." >> oneBotGameLoop st botPlayer
 
+-- EvE
 botGameLoop :: State -> Int -> IO ()
 botGameLoop st turn = do
   putStrLn $ showBoard st
@@ -69,14 +72,28 @@ botGameLoop st turn = do
     Nothing       -> do
       putStrLn $ "Current: " ++ show (current st)
       putStrLn $ "Play in small board: " ++ maybe "any" (show . (+1)) (nextIndex st)
-      putStr $ "AI (" ++ show (current st) ++ ") is thinking... " ++ show (current st == X)
-      let aiMove = findBestMove st 5 (current st == X) -- Adjust depth for speed/performance
-      -- putStrLn (if eval aiMove < 100 then " is thinking..." else " is deeply troubled...")
-      putStrLn $ case current st of
-            X -> if eval aiMove > -100 then " and thinking..." else " and is deeply troubled..."
-            O -> if eval aiMove < 100 then " and thinking..." else " and is deeply troubled..."
-      putStrLn $ "AI (" ++ show (current st) ++ ") plays: " ++ show (fst (move aiMove) + 1) ++ " " ++ show (snd (move aiMove) + 1) ++ " | eval: " ++ show (eval aiMove)
-      botGameLoop (makeMove st (move aiMove)) (turn+1)
+      putStr $ "AI (" ++ show (current st) ++ ") is thinking... " -- ++ show (current st == X)
+      hFlush stdout
+      case turn of
+        0 -> do
+          putStrLn " "
+          botGameLoop (makeMove st (0, 0)) (turn+1)
+        1 -> do
+          putStrLn " "
+          botGameLoop (makeMove st (0, 1)) (turn+1)
+        2 -> do
+          putStrLn " " 
+          botGameLoop (makeMove st (1, 1)) (turn+1)
+        3 -> do
+          putStrLn " "
+          botGameLoop (makeMove st (1, 2)) (turn+1)
+        _ -> do
+              let aiMove = findBestMove st 5 (current st == X)
+              putStrLn $ case current st of
+                        X -> if eval aiMove > 100 then " and feels confident." else if eval aiMove < -100 then " and is deeply troubled..." else " "
+                        O -> if eval aiMove < -100 then " and feels confident." else if eval aiMove > 100 then " and is deeply troubled..." else " "
+              putStrLn $ "AI (" ++ show (current st) ++ ") plays: " ++ show (fst (move aiMove) + 1) ++ " " ++ show (snd (move aiMove) + 1) ++ " | eval: " ++ show (eval aiMove)
+              botGameLoop (makeMove st (move aiMove)) (turn+1)
 
 toLowerChar :: Char -> Char
 toLowerChar c

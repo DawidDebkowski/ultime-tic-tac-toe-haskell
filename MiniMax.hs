@@ -107,8 +107,8 @@ evalSmallBoards bb player = length [sb | sb <- bb, isNothing (checkSmallBoard sb
 countWonSmallBoards :: BigBoard -> Player -> Int
 countWonSmallBoards bb player = length [sb | sb <- bb, checkSmallBoard sb == Just (Just player)]
 
-evalState :: State -> (Int, Int) -> p -> Int
-evalState s mv d = evalStateMove StateMove{state = s, move = mv, eval = 0, moveDepth=0}
+evalState :: State -> (Int, Int) -> Int -> Int
+evalState s mv d = evalStateMove StateMove{state = s, move = mv, eval = 0, moveDepth=d}
 
 -- funkcja do oceny heurystycznej stanu planszy
 evalStateMove :: StateMove -> Int
@@ -116,13 +116,13 @@ evalStateMove sm =
     case checkBigBoard (board s) of
         Just (Just p) | p == X           -> inf
         Just (Just p) | p == O           -> -inf
-        Just Nothing                      -> generalScore
+        Just Nothing                     -> 0
         _ -> evalNextBoard s + generalScore
         where
             s = state sm
             generalScore = twoInALineBigBoard (board s) * 50 + -- dwa w lii na dużej
-                evalSmallBoard (board s !! snd (move sm) ) X * 10 - -- sprawdzamy aktualna plansze, zeby miala wieksza wartosc 
-                evalSmallBoard (board s !! snd (move sm) ) O * 10 + -- tak samo dla O
+                evalSmallBoard (board s !! fst (move sm) ) X * 10 - -- sprawdzamy aktualna plansze, zeby miala wieksza wartosc 
+                evalSmallBoard (board s !! fst (move sm) ) O * 10 + -- tak samo dla O
                 evalSmallBoards (board s) X * 5 - -- sprawdzamy ile plansz jest prawie wygranych
                 evalSmallBoards (board s) O * 5
 
@@ -137,8 +137,8 @@ isTerminal sm = case checkBigBoard (board (state sm)) of
 
 isChildPreferredMax :: StateMove -> StateMove -> Bool
 isChildPreferredMax childResult bestMoveSoFar =
-    (eval childResult > eval bestMoveSoFar) || -- Strictly better
-    (eval childResult == eval bestMoveSoFar && -- Tie in eval, check moveDepth
+    (eval childResult > eval bestMoveSoFar) ||
+    (eval childResult == eval bestMoveSoFar &&
         ( (eval childResult == inf && moveDepth childResult > moveDepth bestMoveSoFar) || -- Win faster
           (eval childResult == -inf && moveDepth childResult < moveDepth bestMoveSoFar)    -- Lose slower
         )
@@ -146,13 +146,14 @@ isChildPreferredMax childResult bestMoveSoFar =
 
 isChildPreferredMin :: StateMove -> StateMove -> Bool
 isChildPreferredMin childResult bestMoveSoFar =
-    (eval childResult < eval bestMoveSoFar) || -- Strictly better for minimizer
-    (eval childResult == eval bestMoveSoFar && -- Tie in eval
+    (eval childResult < eval bestMoveSoFar) ||
+    (eval childResult == eval bestMoveSoFar &&
         ( (eval childResult == inf && moveDepth childResult < moveDepth bestMoveSoFar) || -- X wins slower (good for O)
           (eval childResult == -inf && moveDepth childResult > moveDepth bestMoveSoFar)    -- O wins faster
         )
     )
 
+-- skrócone tworzenie StateMove
 createStateFromChild :: StateMove -> StateMove -> StateMove
 createStateFromChild mv chld = StateMove { state = state mv,
                                            move = move mv,
@@ -212,13 +213,7 @@ minimaxAlphaBeta currentState maximizing searchDepth alpha beta
            then StateMove { state = state currentState, move = (-1,-1), eval = evalStateMove currentState, moveDepth = searchDepth }
            else unifiedLoop alpha beta possibleStateMoves initialBestSoFar
 
--- Top-level function to call minimax
--- Call this function from your game loop when it's the AI's turn
+-- interfejs do minimaxa
 findBestMove :: State -> Int -> Bool -> StateMove
 findBestMove s searchDepth maxMin =
-    -- Assuming the 'current s' player is the one we want to find the best move for (the AI)
-    -- and this player is trying to maximize their score.
-    minimaxAlphaBeta (StateMove{state = s, move = (-1, -1), eval = 0, moveDepth = searchDepth}) maxMin searchDepth (-inf -1) (inf + 1) -- Initial alpha, beta
-
-
--- minimax wybierający następny ruch
+    minimaxAlphaBeta (StateMove{state = s, move = (-1, -1), eval = 0, moveDepth = searchDepth}) maxMin searchDepth (-inf -1) (inf + 1)
